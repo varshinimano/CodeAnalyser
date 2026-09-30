@@ -1,0 +1,837 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SourceCode AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+
+<body>
+
+<div class="app">
+
+    <!-- ================================
+         HEADER
+    ================================= -->
+
+    <header class="header">
+
+        <div class="brand">
+
+            <div class="logo">
+                &lt;/&gt;
+            </div>
+
+            <div>
+
+                <h1>SourceCode AI</h1>
+
+                <p>
+                    AI-powered GitHub Code Analyzer
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="status">
+
+            <span class="status-dot"></span>
+
+            <span id="statusText">
+                No repository loaded
+            </span>
+
+        </div>
+
+    </header>
+
+
+
+    <main class="main">
+
+
+        <!-- ================================
+             REPOSITORY SECTION
+        ================================= -->
+
+        <section class="repo-section">
+
+            <div class="section-title">
+
+                <div>
+
+                    <h2>
+                        Analyze Repository
+                    </h2>
+
+                    <p>
+                        Enter a public GitHub repository
+                        to start asking questions.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="repo-form">
+
+
+                <div class="url-box">
+
+                    <span class="url-icon">
+                        ↗
+                    </span>
+
+
+                    <input
+                        type="text"
+                        id="question"
+                        name="question"
+                        placeholder="https://github.com/username/repository"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+                <button
+                    id="submit-button"
+                    class="analyze-btn"
+                >
+
+                    <span id="buttonText">
+                        Analyze
+                    </span>
+
+                    <span
+                        id="loader"
+                        class="loader hidden"
+                    ></span>
+
+                </button>
+
+            </div>
+
+
+            <div
+                id="repoMessage"
+                class="repo-message"
+            ></div>
+
+        </section>
+
+
+
+        <!-- ================================
+             CHAT SECTION
+        ================================= -->
+
+        <section class="chat-section">
+
+
+            <!-- CHAT HEADER -->
+
+            <div class="chat-header">
+
+
+                <div class="chat-title">
+
+                    <div class="bot-icon">
+                        &lt;/&gt;
+                    </div>
+
+
+                    <div>
+
+                        <h2>
+                            Code Assistant
+                        </h2>
+
+                        <p id="chatStatus">
+                            Analyze a repository to begin
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <button
+                    id="clearButton"
+                    class="clear-btn"
+                    disabled
+                >
+                    Clear Chat
+                </button>
+
+            </div>
+
+
+
+            <!-- ================================
+                 CHAT MESSAGES
+            ================================= -->
+
+            <div
+                id="messageFormeight"
+                class="messages"
+            >
+
+
+                <div class="welcome-message">
+
+
+                    <div class="welcome-icon">
+                        &lt;/&gt;
+                    </div>
+
+
+                    <h2>
+                        Ask about your code
+                    </h2>
+
+
+                    <p>
+                        Analyze a GitHub repository and ask
+                        questions about its structure, code,
+                        authentication, APIs, functions and more.
+                    </p>
+
+
+                    <div class="examples">
+
+                        <span>
+                            How does authentication work?
+                        </span>
+
+                        <span>
+                            Explain the project structure
+                        </span>
+
+                        <span>
+                            Where is the API implemented?
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ================================
+                 CHAT INPUT
+            ================================= -->
+
+            <div class="chat-input-area">
+
+
+                <form id="messageArea">
+
+
+                    <input
+                        type="text"
+                        id="text"
+                        name="msg"
+                        placeholder="Ask something about your code..."
+                        autocomplete="off"
+                        disabled
+                    >
+
+
+                    <button
+                        type="submit"
+                        id="send"
+                        class="send-btn"
+                        disabled
+                    >
+                        →
+                    </button>
+
+
+                </form>
+
+
+                <p class="input-hint">
+
+                    SourceCode AI uses your repository
+                    context to answer questions.
+
+                </p>
+
+
+            </div>
+
+
+        </section>
+
+
+    </main>
+
+</div>
+
+
+
+<script>
+
+/* ==========================================
+   GET HTML ELEMENTS
+========================================== */
+
+const repoInput =
+    document.getElementById("question");
+
+const analyzeButton =
+    document.getElementById("submit-button");
+
+const buttonText =
+    document.getElementById("buttonText");
+
+const loader =
+    document.getElementById("loader");
+
+const statusText =
+    document.getElementById("statusText");
+
+const chatStatus =
+    document.getElementById("chatStatus");
+
+const repoMessage =
+    document.getElementById("repoMessage");
+
+const messageBox =
+    document.getElementById("messageFormeight");
+
+const messageInput =
+    document.getElementById("text");
+
+const messageArea =
+    document.getElementById("messageArea");
+
+const clearButton =
+    document.getElementById("clearButton");
+
+const send =
+    document.getElementById("send");
+
+
+
+/* ==========================================
+   ANALYZE GITHUB REPOSITORY
+========================================== */
+
+analyzeButton.addEventListener(
+    "click",
+    async function () {
+
+
+        const repoUrl =
+            repoInput.value.trim();
+
+
+        /* Check URL */
+
+        if (!repoUrl) {
+
+            showRepoMessage(
+                "Please enter a GitHub repository URL.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        /* Show loading */
+
+        setLoading(true);
+
+
+        showRepoMessage(
+            "Analyzing repository...",
+            "loading"
+        );
+
+
+        try {
+
+
+            /* Send repository URL to Flask */
+
+            const response =
+                await fetch("/chatbot", {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/x-www-form-urlencoded"
+
+                    },
+
+                    body:
+                        new URLSearchParams({
+
+                            question: repoUrl
+
+                        })
+
+                });
+
+
+            const result =
+                await response.json();
+
+
+            /* Check backend response */
+
+            if (!response.ok) {
+
+                throw new Error(
+                    result.response
+                );
+
+            }
+
+
+            /* ======================================
+               REPOSITORY SUCCESSFULLY LOADED
+            ====================================== */
+
+            showRepoMessage(
+                "Repository is ready. You can start asking questions.",
+                "success"
+            );
+
+
+            statusText.textContent =
+                "Repository ready";
+
+
+            chatStatus.textContent =
+                "Ready to answer questions";
+
+
+            /* Enable chat input */
+
+            messageInput.disabled = false;
+
+
+            /* IMPORTANT:
+               Enable green send button */
+
+            send.disabled = false;
+
+
+            /* Enable clear button */
+
+            clearButton.disabled = false;
+
+
+            /* Put cursor in chat box */
+
+            messageInput.focus();
+
+
+        }
+
+
+        catch (error) {
+
+
+            showRepoMessage(
+
+                error.message ||
+                "Something went wrong.",
+
+                "error"
+
+            );
+
+        }
+
+
+        finally {
+
+            setLoading(false);
+
+        }
+
+    }
+);
+
+
+
+/* ==========================================
+   ASK QUESTION
+========================================== */
+
+messageArea.addEventListener(
+    "submit",
+    async function (event) {
+
+
+        /* Prevent normal form refresh */
+
+        event.preventDefault();
+
+
+        const question =
+            messageInput.value.trim();
+
+
+        /* Empty question */
+
+        if (!question) {
+
+            return;
+
+        }
+
+
+        /* Show user's question */
+
+        addMessage(
+            question,
+            "user"
+        );
+
+
+        /* Clear input */
+
+        messageInput.value = "";
+
+
+        /* Show thinking message */
+
+        const typingMessage =
+            addMessage(
+                "Thinking...",
+                "bot",
+                true
+            );
+
+
+        try {
+
+
+            /* Send question to Flask */
+
+            const response =
+                await fetch("/get", {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/x-www-form-urlencoded"
+
+                    },
+
+                    body:
+                        new URLSearchParams({
+
+                            msg: question
+
+                        })
+
+                });
+
+
+            /* Flask returns answer as text */
+
+            const answer =
+                await response.text();
+
+
+            /* Remove Thinking... */
+
+            typingMessage.remove();
+
+
+            /* Show AI answer */
+
+            addMessage(
+                answer,
+                "bot"
+            );
+
+
+        }
+
+
+        catch (error) {
+
+
+            typingMessage.remove();
+
+
+            addMessage(
+
+                "Sorry, something went wrong while getting the answer.",
+
+                "bot"
+
+            );
+
+        }
+
+    }
+);
+
+
+
+/* ==========================================
+   ADD MESSAGE TO CHAT
+========================================== */
+
+function addMessage(
+    text,
+    type,
+    typing = false
+) {
+
+
+    const message =
+        document.createElement("div");
+
+
+    /* User or bot class */
+
+    message.className =
+        type === "user"
+            ? "message user-message"
+            : "message bot-message";
+
+
+    const bubble =
+        document.createElement("div");
+
+
+    bubble.className =
+        "message-bubble";
+
+
+    /* Add text safely */
+
+    bubble.textContent =
+        text;
+
+
+    /* Thinking animation */
+
+    if (typing) {
+
+        bubble.classList.add(
+            "typing"
+        );
+
+    }
+
+
+    message.appendChild(
+        bubble
+    );
+
+
+    messageBox.appendChild(
+        message
+    );
+
+
+    /* Scroll to bottom */
+
+    messageBox.scrollTop =
+        messageBox.scrollHeight;
+
+
+    return message;
+
+}
+
+
+
+/* ==========================================
+   CLEAR CHAT
+========================================== */
+
+clearButton.addEventListener(
+    "click",
+    async function () {
+
+
+        try {
+
+
+            /* Tell backend to clear history */
+
+            await fetch("/get", {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/x-www-form-urlencoded"
+
+                },
+
+                body:
+                    new URLSearchParams({
+
+                        msg: "clear"
+
+                    })
+
+            });
+
+
+            /* Clear frontend messages */
+
+            messageBox.innerHTML = "";
+
+
+            /* Show cleared message */
+
+            const welcome =
+                document.createElement("div");
+
+
+            welcome.className =
+                "welcome-message";
+
+
+            welcome.innerHTML = `
+
+                <div class="welcome-icon">
+                    &lt;/&gt;
+                </div>
+
+                <h2>
+                    Chat cleared
+                </h2>
+
+                <p>
+                    Your conversation history has been cleared.
+                    You can start a new question.
+                </p>
+
+            `;
+
+
+            messageBox.appendChild(
+                welcome
+            );
+
+
+            /* Focus chat input */
+
+            messageInput.focus();
+
+
+        }
+
+
+        catch (error) {
+
+            console.log(
+                "Unable to clear chat."
+            );
+
+        }
+
+    }
+);
+
+
+
+/* ==========================================
+   LOADING STATE
+========================================== */
+
+function setLoading(
+    isLoading
+) {
+
+
+    /* Disable Analyze button */
+
+    analyzeButton.disabled =
+        isLoading;
+
+
+    if (isLoading) {
+
+
+        buttonText.textContent =
+            "Analyzing";
+
+
+        loader.classList.remove(
+            "hidden"
+        );
+
+    }
+
+
+    else {
+
+
+        buttonText.textContent =
+            "Analyze";
+
+
+        loader.classList.add(
+            "hidden"
+        );
+
+    }
+
+}
+
+
+
+/* ==========================================
+   REPOSITORY MESSAGE
+========================================== */
+
+function showRepoMessage(
+    message,
+    type
+) {
+
+
+    repoMessage.textContent =
+        message;
+
+
+    repoMessage.className =
+        "repo-message " + type;
+
+}
+
+</script>
+
+
+</body>
+
+</html>
+
+
